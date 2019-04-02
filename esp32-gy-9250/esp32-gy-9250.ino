@@ -1,17 +1,19 @@
-/* 
-Small adaptations form MPU9250_MS5637_ESP32 Basic Example Code by Kris Winer December 14, 2016
-2019 Sylvain : Simplification and bluetooth support
-
+/* MPU9250_MS5637_ESP32 Basic Example Code
+ by: Kris Winer
+ date: December 14, 2016
  license: Beerware - Use this code however you'd like. If you 
  find it useful you can buy me a beer some time.
  
-
  Demonstrate basic MPU-9250 functionality including parameterizing the register addresses, initializing the sensor, 
  getting properly scaled accelerometer, gyroscope, and magnetometer data out. Added display functions to 
  allow display to on breadboard monitor. Addition of 9 DoF sensor fusion using open source Madgwick and 
  Mahony filter algorithms. Sketch runs on the 3.3 V 8 MHz Pro Mini and the Teensy 3.1.
  
+ This sketch is intended specifically for the MPU9250+MS5637 Add-on shield.
  It uses SDA/SCL on pins 21/22, respectively, and it uses the Wire library.
+ The MS5637 is a simple but high resolution pressure sensor, which can be used in its high resolution
+ mode but with power consumption of 20 microAmp, or in a lower resolution mode with power consumption of
+ only 1 microAmp. The choice will depend on the application.
  
  SDA and SCL should have external pull-up resistors (to 3.3V).
  4K7 resistors are on the MPU9250+MS5637 breakout board.
@@ -26,6 +28,16 @@ Small adaptations form MPU9250_MS5637_ESP32 Basic Example Code by Kris Winer Dec
  */
 #include "Wire.h"   
 #include "BluetoothSerial.h"
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 32 // OLED display height, in pixels
+
+// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
+#define OLED_RESET     4 // Reset pin # (or -1 if sharing Arduino reset pin)
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 BluetoothSerial SerialBT;
 
@@ -302,6 +314,10 @@ void setup()
 
   
   I2Cscan();// look for I2C devices on the bus
+  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3C for 128x32
+    Serial.println(F("SSD1306 allocation failed"));
+  }
     
   // Read the WHO_AM_I register, this is a good test of communication
   Serial.println("MPU9250 9-axis motion sensor...");
@@ -329,9 +345,18 @@ void setup()
    getMres();
     
    Serial.println(" Calibrate gyro and accel");
+   display.clearDisplay();
+   display.setTextSize(1);             // Normal 1:1 pixel scale
+   display.setTextColor(WHITE);        // Draw white text
+   display.setCursor(0,0);             // Start at top-left corner
+   display.println(F("Calibration Gyro et Accel"));
+   display.display();
+   delay(1000);  
+
    accelgyrocalMPU9250(gyroBias, accelBias); // Calibrate gyro and accelerometers, load biases in bias registers
    Serial.println("accel biases (mg)"); Serial.println(1000.*accelBias[0]); Serial.println(1000.*accelBias[1]); Serial.println(1000.*accelBias[2]);
    Serial.println("gyro biases (dps)"); Serial.println(gyroBias[0]); Serial.println(gyroBias[1]); Serial.println(gyroBias[2]);
+   display.display();
 
   delay(1000);  
    
@@ -347,7 +372,11 @@ void setup()
   // Get magnetometer calibration from AK8963 ROM
   initAK8963(magCalibration); Serial.println("AK8963 initialized for active data mode...."); // Initialize device for active mode read of magnetometer
    digitalWrite(myLed, LOW);
- 
+
+  display.clearDisplay();
+  display.println(F("Calibration magneto"));
+  display.display();
+  
  magcalMPU9250(magBias, magScale);
   Serial.println("AK8963 mag biases (mG)"); Serial.println(magBias[0]); Serial.println(magBias[1]); Serial.println(magBias[2]); 
   Serial.println("AK8963 mag scale (mG)"); Serial.println(magScale[0]); Serial.println(magScale[1]); Serial.println(magScale[2]); 
@@ -499,6 +528,20 @@ void loop()
     Serial.print(pitch, 1);
     Serial.print(",");
     Serial.println(roll, 1);
+    display.clearDisplay();
+    display.setTextSize(1);             // Normal 1:1 pixel scale
+    display.setTextColor(WHITE);        // Draw white text
+    display.setCursor(0,0);             // Start at top-left corner
+    display.print("Y : ");
+    display.println(yaw);
+    display.print("P : ");
+    display.println(pitch);
+    display.print("R : ");
+    display.println(roll);
+    display.print("C. Mag : ");
+    display.println(sqrt(mx*mx+my*my+mz*mz));
+
+    display.display();
      
 /*
     Serial.print("Grav_x, Grav_y, Grav_z: ");
@@ -891,11 +934,11 @@ void magcalMPU9250(float * dest1, float * dest2)
   int16_t mag_max[3] = {-32767, -32767, -32767}, mag_min[3] = {32767, 32767, 32767}, mag_temp[3] = {0, 0, 0};
 
   Serial.println("Mag Calibration: Wave device in a figure eight until done!");
-  delay(4000);
+  delay(1000);
   
     // shoot for ~fifteen seconds of mag data
-    if(Mmode == 0x02) sample_count = 128;  // at 8 Hz ODR, new mag data is available every 125 ms
-    if(Mmode == 0x06) sample_count = 1500;  // at 100 Hz ODR, new mag data is available every 10 ms
+    if(Mmode == 0x02) sample_count = 256;  // at 8 Hz ODR, new mag data is available every 125 ms
+    if(Mmode == 0x06) sample_count = 3000;  // at 100 Hz ODR, new mag data is available every 10 ms
    for(ii = 0; ii < sample_count; ii++) {
     readMagData(mag_temp);  // Read the mag data   
     for (int jj = 0; jj < 3; jj++) {

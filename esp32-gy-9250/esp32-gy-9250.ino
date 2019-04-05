@@ -1,3 +1,5 @@
+/* Variante du code de Kris Winner, ajout du Bluetooth et de l'ecran OLED, un peu de tuning des paramettre de la fusion */
+
 /* MPU9250_MS5637_ESP32 Basic Example Code
  by: Kris Winer
  date: December 14, 2016

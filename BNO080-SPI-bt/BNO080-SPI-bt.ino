@@ -1,11 +1,13 @@
+/* Code de demo du BNO080 en mode SPI de N. Seidle, seuls modifs : ajout du bluetooth de l'ESP32 +  format de sortie compatible avec le Razor IMU
+ Rq importante : le mode I2C ne fonctionne pas sur ESP32 à cause du problème de support de l'I2C clock stretching sur cette plateforme
+*/
+
 /*
   Using the BNO080 IMU
   By: Nathan Seidle
   SparkFun Electronics
   Date: July 27th, 2018
   License: This code is public domain but you buy me a beer if you use this and we meet someday (Beerware license).
-
-  Sylvain : add bluetooth support
 
   Feel like supporting our work? Buy a board from SparkFun!
   https://www.sparkfun.com/products/14686
